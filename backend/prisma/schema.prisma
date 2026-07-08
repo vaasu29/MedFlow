@@ -1,0 +1,82 @@
+// MedFlow Prisma Schema — SQLite for dev, PostgreSQL for production
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Patient {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  phone        String?
+  dateOfBirth  String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+  agentLogs    AgentLog[]
+}
+
+model Doctor {
+  id           String        @id @default(cuid())
+  name         String
+  specialty    String
+  email        String        @unique
+  phone        String?
+  bio          String?
+  avatarInitials String
+  available    Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+  slots        Slot[]
+}
+
+model Slot {
+  id          String       @id @default(cuid())
+  doctorId    String
+  doctor      Doctor       @relation(fields: [doctorId], references: [id])
+  date        String       // ISO date string YYYY-MM-DD
+  startTime   String       // HH:MM
+  endTime     String       // HH:MM
+  isBooked    Boolean      @default(false)
+  appointment Appointment?
+  createdAt   DateTime     @default(now())
+}
+
+model Appointment {
+  id            String      @id @default(cuid())
+  patientId     String
+  patient       Patient     @relation(fields: [patientId], references: [id])
+  doctorId      String
+  doctor        Doctor      @relation(fields: [doctorId], references: [id])
+  slotId        String      @unique
+  slot          Slot        @relation(fields: [slotId], references: [id])
+  status        String      @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED, RESCHEDULED
+  notes         String?
+  symptoms      String?
+  urgency       String      @default("MEDIUM")    // LOW, MEDIUM, HIGH, CRITICAL
+  agentBooked   Boolean     @default(false)
+  agentLogId    String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model AgentLog {
+  id                String   @id @default(cuid())
+  patientId         String?
+  patient           Patient? @relation(fields: [patientId], references: [id])
+  rawInput          String
+  parsedSymptoms    String
+  urgencyLevel      String
+  urgencyReason     String
+  recommendedSpecialty String
+  confidence        Float
+  actionTaken       String   // BOOKED, FLAGGED_FOR_REVIEW, NO_AVAILABILITY
+  actionDetails     String?
+  processingTimeMs  Int
+  createdAt         DateTime @default(now())
+}
