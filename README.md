@@ -2,13 +2,18 @@
 
 > **An intelligent healthcare workflow tool** that automates patient intake, classifies urgency, recommends specialists, and autonomously books appointments — powered by an AI agent with full explainability.
 
-[![CI](https://github.com/YOUR_USERNAME/MedFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/MedFlow/actions/workflows/ci.yml)
+[![CI](https://github.com/vaasu29/MedFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/vaasu29/MedFlow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## 🔗 Live Demo
 
-- **Frontend:** [https://medflow-ai.vercel.app](https://medflow-ai.vercel.app) *(deploy to get this link)*
-- **Backend API:** [https://medflow-api.onrender.com/api/health](https://medflow-api.onrender.com/api/health) *(deploy to get this link)*
+| | Link |
+|---|---|
+| 🌐 **Frontend** | [https://vaasu.medflow.netlify.app](https://vaasu.medflow.netlify.app) |
+| 🔧 **Backend API** | [https://medflow-api-uwdl.onrender.com/api/health](https://medflow-api-uwdl.onrender.com/api/health) |
+| 📂 **GitHub** | [github.com/vaasu29/MedFlow](https://github.com/vaasu29/MedFlow) |
+
+> ⚠️ Backend is hosted on Render free tier — first request after inactivity may take ~30-50 seconds to wake up.
 
 ---
 
