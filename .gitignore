@@ -19,8 +19,6 @@ out/
 *.db-journal
 *.sqlite
 
-# Prisma migrations (keep schema, ignore the lock)
-backend/prisma/migrations/
 
 # Logs
 *.log
