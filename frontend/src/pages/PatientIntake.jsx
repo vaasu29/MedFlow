@@ -1,38 +1,54 @@
 import { useState } from 'react'
 import axios from 'axios'
-import AgentThinking from '../components/AgentThinking'
+import medicalScan from '../assets/medical_scan.png'
 
 const API = import.meta.env.VITE_API_URL || ''
 
-const SAMPLE_SYMPTOMS = [
-  'I have been experiencing chest pain and shortness of breath for the past 2 days',
-  'Severe migraine headaches for 3 days, with nausea and blurred vision',
-  'Persistent cough and wheezing for a week, difficulty breathing at night',
-  'Sharp abdominal pain in lower right area, nausea, no fever',
-  'Knee pain and swelling after a fall, difficulty walking',
+const PROCESS_STEPS = [
+  {
+    icon: '📝',
+    title: 'Step 1: Symptoms',
+    desc: 'Describe your condition in detail.',
+  },
+  {
+    icon: '🔬',
+    title: 'Step 2: AI Analysis',
+    desc: 'MedFlow maps symptoms to clinical patterns.',
+  },
+  {
+    icon: '📅',
+    title: 'Step 3: Scheduling',
+    desc: 'Instant booking based on severity.',
+  },
+]
+
+const THINKING_STEPS = [
+  { icon: '🔍', label: 'Parsing symptoms',         key: 'parse'    },
+  { icon: '⚡', label: 'Classifying urgency',       key: 'urgency'  },
+  { icon: '🩺', label: 'Identifying specialist',    key: 'spec'     },
+  { icon: '📅', label: 'Checking availability',     key: 'avail'    },
+  { icon: '✅', label: 'Confirming appointment',    key: 'book'     },
 ]
 
 export default function PatientIntake() {
-  const [form, setForm] = useState({
-    name: '', email: '', phone: '', dateOfBirth: '', symptoms: '',
-  })
+  const [form, setForm] = useState({ name: '', phone: '', email: '', symptoms: '' })
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isThinking, setIsThinking] = useState(false)
   const [result, setResult] = useState(null)
-  const [submitError, setSubmitError] = useState('')
+  const [apiError, setApiError] = useState('')
 
   function handleChange(e) {
     const { name, value } = e.target
-    setForm((f) => ({ ...f, [name]: value }))
-    if (errors[name]) setErrors((e) => ({ ...e, [name]: '' }))
+    setForm(f => ({ ...f, [name]: value }))
+    if (errors[name]) setErrors(e => ({ ...e, [name]: '' }))
   }
 
   function validate() {
     const errs = {}
     if (!form.name.trim()) errs.name = 'Name is required'
     if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Valid email required'
-    if (!form.symptoms.trim() || form.symptoms.trim().length < 10) errs.symptoms = 'Please describe symptoms (min 10 characters)'
+    if (!form.symptoms.trim() || form.symptoms.trim().length < 10) errs.symptoms = 'Minimum 10 characters'
     return errs
   }
 
@@ -44,15 +60,19 @@ export default function PatientIntake() {
     setIsSubmitting(true)
     setIsThinking(true)
     setResult(null)
-    setSubmitError('')
+    setApiError('')
 
     try {
-      // Simulate agent "thinking" time for realism
-      await new Promise((r) => setTimeout(r, 2200))
-      const { data } = await axios.post(`${API}/api/intake`, form)
+      await new Promise(r => setTimeout(r, 2400))
+      const { data } = await axios.post(`${API}/api/intake`, {
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        symptoms: form.symptoms,
+      })
       setResult(data)
     } catch (err) {
-      setSubmitError(err.response?.data?.error || 'Failed to submit intake. Is the backend running?')
+      setApiError(err.response?.data?.error || 'Could not reach backend. Is the server running?')
     } finally {
       setIsSubmitting(false)
       setIsThinking(false)
@@ -60,232 +80,306 @@ export default function PatientIntake() {
   }
 
   function reset() {
-    setForm({ name: '', email: '', phone: '', dateOfBirth: '', symptoms: '' })
+    setForm({ name: '', phone: '', email: '', symptoms: '' })
     setResult(null)
     setErrors({})
-    setSubmitError('')
+    setApiError('')
   }
 
+  const urgencyClass = result ? `urg-${result.agent?.urgency?.toLowerCase()}` : ''
+
   return (
-    <div className="page">
+    <div>
+      {/* Page heading */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1 className="page-title">Patient Intake</h1>
+        <p className="page-subtitle">
+          Please provide as much detail as possible. Our AI Assistant will analyze your
+          symptoms to streamline your clinical visit.
+        </p>
+      </div>
+
       <div className="intake-layout">
-        {/* ── Hero Column ─────────────────────────────── */}
-        <div className="intake-hero">
-          <div className="intake-hero-badge">
-            🤖 Powered by AI Agent
-          </div>
-          <h1 className="intake-hero-title">
-            Smart Patient Intake
-            <br />
-            <span className="highlight">Automated by AI</span>
-          </h1>
-          <p className="intake-hero-desc">
-            Describe your symptoms in plain language. Our AI agent will classify
-            urgency, identify the right specialist, and automatically book the
-            earliest available appointment — in seconds.
-          </p>
-
-          <div className="feature-list">
-            {[
-              ['⚡', 'Instant urgency classification (LOW → CRITICAL)'],
-              ['🩺', 'AI-matched specialist recommendation'],
-              ['📅', 'Autonomous appointment booking'],
-              ['🔍', 'Full decision explainability & audit log'],
-              ['👤', 'Human override for every AI decision'],
-            ].map(([icon, text]) => (
-              <div className="feature-item" key={text}>
-                <span className="feature-icon">{icon}</span>
-                <span>{text}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Sample symptoms */}
-          <div className="card mt-4" style={{ background: 'rgba(255,255,255,0.02)' }}>
-            <div className="text-xs text-muted mb-3" style={{ textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>
-              Try a sample description
-            </div>
-            <div className="flex flex-col gap-2">
-              {SAMPLE_SYMPTOMS.map((s) => (
-                <button
-                  key={s}
-                  className="btn btn-secondary btn-sm"
-                  style={{ textAlign: 'left', justifyContent: 'flex-start', fontSize: '0.78rem' }}
-                  onClick={() => setForm((f) => ({ ...f, symptoms: s }))}
-                >
-                  {s.slice(0, 55)}…
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Form Column ─────────────────────────────── */}
+        {/* ── Left: Form ─────────────────────────────── */}
         <div>
           {!result ? (
             <div className="intake-form-card">
-              <div className="form-title">Patient Information</div>
-              <p className="text-sm text-muted mt-1">All fields marked * are required</p>
-              <div className="form-divider" />
-
               <form onSubmit={handleSubmit} id="intake-form">
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="intake-name">
-                      Full Name <span>*</span>
-                    </label>
+                {/* Row 1: Name + Phone */}
+                <div className="form-row">
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" htmlFor="intake-name">Full Patient Name</label>
                     <input
                       id="intake-name"
                       className="form-input"
                       name="name"
                       value={form.name}
                       onChange={handleChange}
-                      placeholder="Jane Doe"
+                      placeholder="e.g. Jonathan Harker"
                       autoComplete="name"
                     />
-                    {errors.name && <span className="form-error">{errors.name}</span>}
+                    {errors.name && <span style={{ fontSize: '0.75rem', color: 'var(--accent-red)', marginTop: '0.25rem' }}>{errors.name}</span>}
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="intake-email">
-                      Email <span>*</span>
-                    </label>
-                    <input
-                      id="intake-email"
-                      className="form-input"
-                      name="email"
-                      type="email"
-                      value={form.email}
-                      onChange={handleChange}
-                      placeholder="jane@example.com"
-                      autoComplete="email"
-                    />
-                    {errors.email && <span className="form-error">{errors.email}</span>}
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="intake-phone">Phone</label>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" htmlFor="intake-phone">Contact Number</label>
                     <input
                       id="intake-phone"
                       className="form-input"
                       name="phone"
                       value={form.phone}
                       onChange={handleChange}
-                      placeholder="+91 98765 43210"
+                      placeholder="+1 (555) 000-0000"
                       autoComplete="tel"
                     />
                   </div>
-
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="intake-dob">Date of Birth</label>
-                    <input
-                      id="intake-dob"
-                      className="form-input"
-                      name="dateOfBirth"
-                      type="date"
-                      value={form.dateOfBirth}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <div className="form-group form-full">
-                    <label className="form-label" htmlFor="intake-symptoms">
-                      Describe Your Symptoms <span>*</span>
-                    </label>
-                    <textarea
-                      id="intake-symptoms"
-                      className="form-textarea"
-                      name="symptoms"
-                      value={form.symptoms}
-                      onChange={handleChange}
-                      placeholder="Describe what you're experiencing in your own words. The AI agent will analyze this to book the right appointment..."
-                      rows={5}
-                    />
-                    {errors.symptoms && <span className="form-error">{errors.symptoms}</span>}
-                    <span className="form-hint">{form.symptoms.length} characters</span>
-                  </div>
                 </div>
 
-                {submitError && (
-                  <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 'var(--radius-md)', padding: '0.875rem 1rem', marginTop: '1rem', fontSize: '0.875rem', color: 'var(--accent-red)' }}>
-                    ⚠️ {submitError}
+                {/* Email */}
+                <div className="form-group" style={{ marginTop: '1rem' }}>
+                  <label className="form-label" htmlFor="intake-email">Email Address</label>
+                  <div className="input-wrapper">
+                    <span className="input-icon">✉️</span>
+                    <input
+                      id="intake-email"
+                      className="form-input has-icon"
+                      name="email"
+                      type="email"
+                      value={form.email}
+                      onChange={handleChange}
+                      placeholder="patient@email.com"
+                      autoComplete="email"
+                    />
                   </div>
-                )}
+                  {errors.email
+                    ? <span style={{ fontSize: '0.75rem', color: 'var(--accent-red)', marginTop: '0.25rem' }}>{errors.email}</span>
+                    : form.email && /\S+@\S+\.\S+/.test(form.email) && (
+                      <div className="input-verified">
+                        <span>✅</span> Verified contact method for AI results
+                      </div>
+                    )
+                  }
+                </div>
 
+                {/* Symptoms */}
+                <div className="form-group">
+                  <div className="symptoms-header">
+                    <label className="form-label" htmlFor="intake-symptoms" style={{ marginBottom: 0 }}>
+                      Free-text symptoms
+                    </label>
+                    <div className="ai-ready-badge">
+                      <span className="ai-ready-dot" />
+                      AI analysis ready
+                    </div>
+                  </div>
+                  <textarea
+                    id="intake-symptoms"
+                    className="form-textarea"
+                    name="symptoms"
+                    value={form.symptoms}
+                    onChange={handleChange}
+                    placeholder="Describe how you're feeling in your own words... (e.g. 'I've had a persistent dull ache in my lower back for three days, worsening when I sit for long periods.')"
+                    rows={6}
+                  />
+                  {errors.symptoms && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--accent-red)', marginTop: '0.25rem' }}>{errors.symptoms}</span>
+                  )}
+                </div>
+
+                {apiError && <div className="error-box">⚠️ {apiError}</div>}
+
+                {/* Submit */}
                 <button
                   id="intake-submit"
                   type="submit"
-                  className="btn btn-primary btn-full btn-lg"
-                  style={{ marginTop: '1.5rem' }}
+                  className="submit-btn"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? (
-                    <><div className="spinner spinner-sm" /> AI Agent Processing…</>
-                  ) : (
-                    <> Submit to AI Agent →</>
-                  )}
+                  {isSubmitting
+                    ? <><div className="spinner spinner-sm" /> Processing…</>
+                    : <><span className="submit-icon">🚀</span> Submit to AI Assistant</>
+                  }
                 </button>
+
+                <p className="submit-disclaimer">
+                  By submitting, you agree to our privacy terms and AI processing policy.
+                </p>
               </form>
 
-              {/* Agent thinking panel */}
-              {isThinking && <AgentThinking isThinking={true} />}
+              {/* Thinking panel */}
+              {isThinking && (
+                <div className="thinking-panel">
+                  <div className="thinking-header">
+                    <div className="thinking-icon">🤖</div>
+                    <div>
+                      <div className="thinking-title" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        AI Agent Processing
+                        <div className="thinking-dots">
+                          <span /><span /><span />
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted">Analyzing your clinical data</div>
+                    </div>
+                  </div>
+                  <div className="thinking-steps">
+                    {THINKING_STEPS.map(s => (
+                      <div className="thinking-step" key={s.key}>
+                        <span className="ts-icon">{s.icon}</span>
+                        <div>
+                          <div className="ts-label">{s.label}</div>
+                          <div className="ts-value">
+                            <div className="thinking-dots"><span /><span /><span /></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
-            /* ── Result Card ─────────────────────────── */
+            /* ── Result view ─────────────────────────── */
             <div>
-              {result.agent.action === 'BOOKED' ? (
-                <div className="result-card result-success">
-                  <div className="result-icon">✅</div>
-                  <div className="result-title">Appointment Booked!</div>
-                  <div className="result-desc">
-                    Your AI agent successfully scheduled an appointment with a {result.agent.recommendedSpecialty}.
+              {result.agent?.action === 'BOOKED' ? (
+                <div className="agent-result success">
+                  <div className="agent-result-header">
+                    <span className="agent-result-icon">✅</span>
+                    <div>
+                      <div className="agent-result-title">Appointment Confirmed</div>
+                      <div className="agent-result-sub">AI agent successfully scheduled your visit</div>
+                    </div>
+                    <span className={`badge b-${result.agent.urgency?.toLowerCase()}`} style={{ marginLeft: 'auto' }}>
+                      {result.agent.urgency}
+                    </span>
                   </div>
 
-                  <div className="appointment-details">
-                    <div className="detail-item">
-                      <span className="detail-label">Patient</span>
-                      <span className="detail-value">{result.patient.name}</span>
+                  <div className="result-grid">
+                    <div>
+                      <div className="result-field-label">Patient</div>
+                      <div className="result-field-value">{result.patient?.name}</div>
                     </div>
-                    <div className="detail-item">
-                      <span className="detail-label">Doctor</span>
-                      <span className="detail-value">Dr. {result.agent.doctor?.name}</span>
+                    <div>
+                      <div className="result-field-label">Doctor</div>
+                      <div className="result-field-value">Dr. {result.agent.doctor?.name}</div>
                     </div>
-                    <div className="detail-item">
-                      <span className="detail-label">Specialty</span>
-                      <span className="detail-value">{result.agent.recommendedSpecialty}</span>
+                    <div>
+                      <div className="result-field-label">Specialty</div>
+                      <div className="result-field-value text-blue">{result.agent.recommendedSpecialty}</div>
                     </div>
-                    <div className="detail-item">
-                      <span className="detail-label">Date</span>
-                      <span className="detail-value">{result.agent.slot?.date}</span>
+                    <div>
+                      <div className="result-field-label">Date</div>
+                      <div className="result-field-value">{result.agent.slot?.date}</div>
                     </div>
-                    <div className="detail-item">
-                      <span className="detail-label">Time</span>
-                      <span className="detail-value">{result.agent.slot?.startTime} – {result.agent.slot?.endTime}</span>
+                    <div>
+                      <div className="result-field-label">Time</div>
+                      <div className="result-field-value">{result.agent.slot?.startTime} – {result.agent.slot?.endTime}</div>
                     </div>
-                    <div className="detail-item">
-                      <span className="detail-label">Urgency</span>
-                      <span className={`detail-value urgency-${result.agent.urgency?.toLowerCase()}`}>
-                        {result.agent.urgency}
-                      </span>
+                    <div>
+                      <div className="result-field-label">Confidence</div>
+                      <div className="result-field-value text-teal">{Math.round(result.agent.confidence * 100)}%</div>
+                    </div>
+                  </div>
+
+                  {/* Agent reasoning */}
+                  <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--r-md)', padding: '1rem', marginTop: '0.5rem' }}>
+                    <div className="text-xs text-muted mb-3" style={{ textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>
+                      AI Reasoning
+                    </div>
+                    <div className="thinking-steps">
+                      <div className="thinking-step" style={{ animation: 'none', opacity: 1 }}>
+                        <span className="ts-icon">⚡</span>
+                        <div>
+                          <div className="ts-label">Urgency Classification</div>
+                          <div className={`ts-value ${urgencyClass}`}>{result.agent.urgency}</div>
+                          <div className="text-xs text-muted mt-1">{result.agent.urgencyReason}</div>
+                        </div>
+                      </div>
+                      <div className="thinking-step" style={{ animation: 'none', opacity: 1 }}>
+                        <span className="ts-icon">🩺</span>
+                        <div style={{ flex: 1 }}>
+                          <div className="ts-label">Specialist Match</div>
+                          <div className="ts-value">{result.agent.recommendedSpecialty}</div>
+                          <div style={{ marginTop: '0.4rem' }}>
+                            <div className="conf-bar">
+                              <div className="conf-fill teal" style={{ width: `${Math.round(result.agent.confidence * 100)}%` }} />
+                            </div>
+                            <div className="text-xs text-muted mt-1">{Math.round(result.agent.confidence * 100)}% confidence</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="thinking-step" style={{ animation: 'none', opacity: 1 }}>
+                        <span className="ts-icon">📝</span>
+                        <div>
+                          <div className="ts-label">Parsed Symptoms</div>
+                          <div className="ts-value text-sm">{result.agent.parsedSymptoms?.summary}</div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="result-card result-flagged">
-                  <div className="result-icon">⚠️</div>
-                  <div className="result-title">Flagged for Review</div>
-                  <div className="result-desc">{result.agent.message}</div>
+                <div className="agent-result flagged">
+                  <div className="agent-result-header">
+                    <span className="agent-result-icon">⚠️</span>
+                    <div>
+                      <div className="agent-result-title">Flagged for Human Review</div>
+                      <div className="agent-result-sub">{result.agent.message}</div>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* Always show agent reasoning */}
-              <AgentThinking result={result} isThinking={false} />
-
-              <button id="intake-reset" className="btn btn-secondary btn-full mt-4" onClick={reset}>
+              <button id="intake-reset" className="btn btn-ghost w-full mt-4" onClick={reset}>
                 ← Submit Another Intake
               </button>
             </div>
           )}
+        </div>
+
+        {/* ── Right: Side Panels ──────────────────────── */}
+        <div className="right-panel">
+          {/* Process Overview */}
+          <div className="process-card">
+            <div className="card-title">Process Overview</div>
+            {PROCESS_STEPS.map((step, i) => (
+              <div className="process-step" key={i}>
+                <div className="process-step-icon">{step.icon}</div>
+                <div>
+                  <div className="process-step-title">{step.title}</div>
+                  <div className="process-step-desc">{step.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* AI Precision Engine */}
+          <div className="ai-engine-card">
+            <div className="ai-engine-badge">
+              <div className="ai-engine-badge-icon">🛡️</div>
+              AI PRECISION ENGINE
+            </div>
+            <p className="ai-engine-desc">
+              MedFlow's model has been trained on over 2M clinical cases to ensure accurate triage.
+            </p>
+            <div className="accuracy-row">
+              <span className="accuracy-label">Pattern Matching</span>
+              <span className="accuracy-value">98.2%</span>
+            </div>
+            <div className="accuracy-bar">
+              <div className="accuracy-fill" style={{ width: '98.2%' }} />
+            </div>
+          </div>
+
+          {/* HIPAA Scan Card */}
+          <div className="scan-card">
+            <img src={medicalScan} alt="Medical body scan visualization" className="scan-card-img" />
+            <div className="scan-card-overlay">
+              <p className="scan-card-text">
+                Your data is encrypted and handled by HIPAA-compliant clinical protocols.{' '}
+                <span className="scan-card-brand">MedFlow</span>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

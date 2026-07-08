@@ -9,181 +9,164 @@ export default function AgentLogs() {
   const [expanded, setExpanded] = useState(null)
   const [filter, setFilter] = useState('ALL')
 
-  useEffect(() => {
-    fetchLogs()
-  }, [])
+  useEffect(() => { fetchLogs() }, [])
 
   async function fetchLogs() {
     try {
       const { data } = await axios.get(`${API}/api/agent-logs?limit=100`)
       setLogs(data.logs)
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
+    } catch (e) { console.error(e) }
+    finally { setLoading(false) }
   }
 
-  const filtered = filter === 'ALL' ? logs : logs.filter((l) => l.urgencyLevel === filter || l.actionTaken === filter)
+  const FILTERS = ['ALL', 'BOOKED', 'FLAGGED_FOR_REVIEW', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
+
+  const filtered = filter === 'ALL' ? logs
+    : logs.filter(l => l.urgencyLevel === filter || l.actionTaken === filter)
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div className="flex items-center gap-3 mb-2">
-          <span style={{ fontSize: '1.75rem' }}>🤖</span>
-          <h1 className="page-title" style={{ marginBottom: 0 }}>Agent Decision Log</h1>
-          <span className="badge badge-agent">Explainability</span>
+    <div>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <div className="flex items-center gap-3 mb-1">
+          <h1 className="page-title" style={{ marginBottom: 0 }}>AI Logs</h1>
+          <span className="badge b-ai">Explainability</span>
         </div>
         <p className="page-subtitle">
-          Every AI decision — logged with full reasoning, confidence scores, and timing.
-          This is your audit trail for all autonomous actions.
+          Every autonomous AI decision — logged with full reasoning, confidence scores, and timing.
         </p>
       </div>
 
-      {/* Filter bar */}
-      <div className="flex gap-2 mb-4" style={{ flexWrap: 'wrap' }}>
-        {['ALL', 'BOOKED', 'FLAGGED_FOR_REVIEW', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((f) => (
+      {/* Filters */}
+      <div className="filter-strip">
+        {FILTERS.map(f => (
           <button
             key={f}
-            id={`filter-${f.toLowerCase()}`}
-            className={`btn btn-sm ${filter === f ? 'btn-primary' : 'btn-secondary'}`}
+            id={`log-filter-${f.toLowerCase()}`}
+            className={`btn btn-sm ${filter === f ? 'btn-primary' : 'btn-ghost'}`}
             onClick={() => setFilter(f)}
           >
-            {f === 'ALL' ? '📋 All' : f === 'BOOKED' ? '✅ Booked' : f === 'FLAGGED_FOR_REVIEW' ? '⚠️ Flagged' : f}
+            {f === 'ALL' ? '📋 All'
+              : f === 'BOOKED' ? '✅ Booked'
+              : f === 'FLAGGED_FOR_REVIEW' ? '⚠️ Flagged'
+              : f}
           </button>
         ))}
-        <span className="text-sm text-muted" style={{ marginLeft: 'auto', alignSelf: 'center' }}>
+        <span className="text-xs text-muted" style={{ marginLeft: 'auto', alignSelf: 'center' }}>
           {filtered.length} records
         </span>
       </div>
 
       {loading ? (
-        <div className="loading-center"><div className="spinner" /><span>Loading agent logs…</span></div>
+        <div className="loading-state"><div className="spinner" /><span>Loading agent logs…</span></div>
       ) : filtered.length === 0 ? (
-        <div className="empty-state">
+        <div className="empty">
           <div className="empty-icon">🤖</div>
           <p>No agent logs yet. Submit a patient intake to see AI decisions here.</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {filtered.map((log, i) => {
-            const isExpanded = expanded === log.id
-            let parsed = {}
-            try { parsed = JSON.parse(log.parsedSymptoms) } catch {}
+        filtered.map((log, i) => {
+          const isExp = expanded === log.id
+          let parsed = {}
+          try { parsed = JSON.parse(log.parsedSymptoms) } catch {}
 
-            return (
-              <div
-                key={log.id}
-                className={`log-entry ${isExpanded ? 'expanded' : ''}`}
-                onClick={() => setExpanded(isExpanded ? null : log.id)}
-                style={{ animationDelay: `${i * 0.04}s` }}
-              >
-                <div className="log-entry-header">
-                  <div className="log-entry-meta">
-                    <span style={{ fontSize: '1.1rem' }}>
-                      {log.actionTaken === 'BOOKED' ? '✅' : '⚠️'}
-                    </span>
-                    <span style={{ fontWeight: 600 }}>{log.patient?.name || 'Anonymous Patient'}</span>
-                    <span className={`badge badge-${log.urgencyLevel?.toLowerCase()}`}>
-                      {log.urgencyLevel}
-                    </span>
-                    <span className={`badge ${log.actionTaken === 'BOOKED' ? 'badge-scheduled' : 'badge-medium'}`}>
-                      {log.actionTaken === 'BOOKED' ? 'Booked' : 'Flagged'}
-                    </span>
-                    <span className="badge badge-agent">{log.recommendedSpecialty}</span>
+          return (
+            <div
+              key={log.id}
+              className={`log-item ${isExp ? 'expanded' : ''}`}
+              onClick={() => setExpanded(isExp ? null : log.id)}
+            >
+              <div className="log-item-header">
+                <span>{log.actionTaken === 'BOOKED' ? '✅' : '⚠️'}</span>
+                <span className="text-sm font-600">{log.patient?.name || 'Anonymous'}</span>
+                <span className={`badge b-${log.urgencyLevel?.toLowerCase()}`}>{log.urgencyLevel}</span>
+                <span className={`badge ${log.actionTaken === 'BOOKED' ? 'b-scheduled' : 'b-medium'}`}>
+                  {log.actionTaken === 'BOOKED' ? 'Booked' : 'Flagged'}
+                </span>
+                <span className="badge b-ai">{log.recommendedSpecialty}</span>
+                <div className="log-item-expand">
+                  <span className="text-xs text-muted font-mono">{log.processingTimeMs}ms</span>
+                  {'  '}
+                  <span className="text-xs text-muted">
+                    {new Date(log.createdAt).toLocaleDateString('en-IN', {
+                      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+                    })}
+                  </span>
+                  {'  '}
+                  <span style={{ color: 'var(--text-muted)' }}>{isExp ? '▲' : '▼'}</span>
+                </div>
+              </div>
+
+              {!isExp && (
+                <div className="text-xs text-muted truncate mt-2" style={{ paddingLeft: '1.75rem' }}>
+                  "{log.rawInput.slice(0, 90)}{log.rawInput.length > 90 ? '…' : ''}"
+                </div>
+              )}
+
+              {isExp && (
+                <div className="log-detail">
+                  <div className="log-raw-quote">"{log.rawInput}"</div>
+                  <div className="log-fields">
+                    <div>
+                      <div className="lf-label">Patient Email</div>
+                      <div className="lf-value">{log.patient?.email || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="lf-label">Urgency</div>
+                      <div className={`lf-value urg-${log.urgencyLevel?.toLowerCase()}`}>{log.urgencyLevel}</div>
+                    </div>
+                    <div>
+                      <div className="lf-label">Specialty</div>
+                      <div className="lf-value">{log.recommendedSpecialty}</div>
+                    </div>
+                    <div>
+                      <div className="lf-label">Confidence</div>
+                      <div className="lf-value text-teal">{Math.round(log.confidence * 100)}%</div>
+                    </div>
+                    <div>
+                      <div className="lf-label">Action</div>
+                      <div className={`lf-value ${log.actionTaken === 'BOOKED' ? 'text-teal' : 'urg-high'}`}>
+                        {log.actionTaken}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="lf-label">Processing Time</div>
+                      <div className="lf-value font-mono">{log.processingTimeMs}ms</div>
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <div className="lf-label">Reasoning</div>
+                      <div className="lf-value text-sm text-muted">{log.urgencyReason}</div>
+                    </div>
+                    {log.actionDetails && (
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <div className="lf-label">Action Details</div>
+                        <div className="lf-value text-sm text-muted">{log.actionDetails}</div>
+                      </div>
+                    )}
+                    {parsed.keywords?.length > 0 && (
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <div className="lf-label">Matched Keywords</div>
+                        <div className="slot-chips mt-1">
+                          {parsed.keywords.map(kw => (
+                            <span key={kw} className="slot-chip">{kw}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted font-mono">{log.processingTimeMs}ms</span>
-                    <span className="text-xs text-muted">
-                      {new Date(log.createdAt).toLocaleDateString('en-IN', {
-                        day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
-                      })}
-                    </span>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                      {isExpanded ? '▲' : '▼'}
-                    </span>
+                  <div style={{ marginTop: '0.875rem' }}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs text-muted">Confidence Score</span>
+                      <span className="text-xs text-teal">{Math.round(log.confidence * 100)}%</span>
+                    </div>
+                    <div className="conf-bar">
+                      <div className="conf-fill teal" style={{ width: `${Math.round(log.confidence * 100)}%` }} />
+                    </div>
                   </div>
                 </div>
-
-                {/* Collapsed preview */}
-                {!isExpanded && (
-                  <div className="text-xs text-muted truncate mt-2" style={{ marginLeft: '1.875rem' }}>
-                    "{log.rawInput.slice(0, 90)}{log.rawInput.length > 90 ? '…' : ''}"
-                  </div>
-                )}
-
-                {/* Expanded details */}
-                {isExpanded && (
-                  <div className="log-entry-details">
-                    <div className="log-raw">"{log.rawInput}"</div>
-
-                    <div className="log-grid">
-                      <div className="log-field">
-                        <span className="log-field-label">Patient Email</span>
-                        <span className="log-field-value">{log.patient?.email || '—'}</span>
-                      </div>
-                      <div className="log-field">
-                        <span className="log-field-label">Urgency Level</span>
-                        <span className={`log-field-value urgency-${log.urgencyLevel?.toLowerCase()}`}>{log.urgencyLevel}</span>
-                      </div>
-                      <div className="log-field">
-                        <span className="log-field-label">Recommended Specialty</span>
-                        <span className="log-field-value">{log.recommendedSpecialty}</span>
-                      </div>
-                      <div className="log-field">
-                        <span className="log-field-label">Confidence Score</span>
-                        <span className="log-field-value" style={{ color: 'var(--accent-primary)' }}>
-                          {Math.round(log.confidence * 100)}%
-                        </span>
-                      </div>
-                      <div className="log-field">
-                        <span className="log-field-label">Action Taken</span>
-                        <span className={`log-field-value ${log.actionTaken === 'BOOKED' ? 'action-booked' : 'action-flagged'}`}>
-                          {log.actionTaken}
-                        </span>
-                      </div>
-                      <div className="log-field">
-                        <span className="log-field-label">Processing Time</span>
-                        <span className="log-field-value font-mono">{log.processingTimeMs}ms</span>
-                      </div>
-                      <div className="log-field" style={{ gridColumn: '1 / -1' }}>
-                        <span className="log-field-label">Urgency Reasoning</span>
-                        <span className="log-field-value text-sm" style={{ color: 'var(--text-secondary)' }}>{log.urgencyReason}</span>
-                      </div>
-                      {log.actionDetails && (
-                        <div className="log-field" style={{ gridColumn: '1 / -1' }}>
-                          <span className="log-field-label">Action Details</span>
-                          <span className="log-field-value text-sm" style={{ color: 'var(--text-secondary)' }}>{log.actionDetails}</span>
-                        </div>
-                      )}
-                      {parsed.keywords?.length > 0 && (
-                        <div className="log-field" style={{ gridColumn: '1 / -1' }}>
-                          <span className="log-field-label">Matched Keywords</span>
-                          <div className="slot-list mt-1">
-                            {parsed.keywords.map((kw) => (
-                              <span key={kw} className="slot-chip">{kw}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Confidence bar */}
-                    <div style={{ marginTop: '1rem' }}>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-xs text-muted">Confidence</span>
-                        <span className="text-xs" style={{ color: 'var(--accent-primary)' }}>{Math.round(log.confidence * 100)}%</span>
-                      </div>
-                      <div className="confidence-bar">
-                        <div className="confidence-fill" style={{ width: `${Math.round(log.confidence * 100)}%` }} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+              )}
+            </div>
+          )
+        })
       )}
     </div>
   )
